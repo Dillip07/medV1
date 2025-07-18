@@ -1,0 +1,9 @@
+body {
+    background: yellow !important;
+}
+
+input:focus,
+input:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
