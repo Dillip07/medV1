@@ -12,7 +12,7 @@ export default function MobileHeader() {
         <View style={styles.headerContent}>
           <View style={styles.logo}>
             <Ionicons name="medical" size={24} color="#007AFF" />
-            <Text style={styles.logoText}>MedApp</Text>
+            <Text style={styles.logoText}>MyMedCare</Text>
           </View>
           <View style={styles.platformBadge}>
             <Text style={styles.platformText}>Mobile</Text>

@@ -8,6 +8,8 @@ import {
   StyleSheet,
   FlatList,
   Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -48,6 +50,11 @@ export default function DoctorApprovals({ admin }: { admin: Admin }) {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // doctorId for which action is loading
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationInput, setLocationInput] = useState("");
+  const [approvingDoctorId, setApprovingDoctorId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -101,26 +108,61 @@ export default function DoctorApprovals({ admin }: { admin: Admin }) {
     },
   ];
 
-  const handleApprove = async (doctorId: string) => {
-    setActionLoading(doctorId);
+  const handleApprove = (doctorId: string) => {
+    setApprovingDoctorId(doctorId);
+    setShowLocationModal(true);
+  };
+
+  // Add geocoding helper
+  const geocodeLocation = async (address: string) => {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      address
+    )}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+      };
+    }
+    return null;
+  };
+
+  const submitApproveWithLocation = async () => {
+    if (!approvingDoctorId) return;
+    setActionLoading(approvingDoctorId);
     setActionError(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/doctors/${doctorId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved", verified: true }),
-      });
-      if (!res.ok) throw new Error("Failed to set under review");
+      // Geocode the location input
+      const coords = await geocodeLocation(locationInput);
+      if (!coords) throw new Error("Could not find location coordinates");
+      const res = await fetch(
+        `${BACKEND_URL}/doctors/${approvingDoctorId}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "approved",
+            verified: true,
+            location: coords, // send as { lat, lng }
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to approve doctor");
       const data = await res.json();
       setDoctors((prev) =>
         prev.map((doc) =>
-          doc.id === doctorId
+          doc.id === approvingDoctorId
             ? { ...doc, status: "approved", reviewedBy: admin.name }
             : doc
         )
       );
+      setShowLocationModal(false);
+      setLocationInput("");
+      setApprovingDoctorId(null);
     } catch (err: any) {
-      setActionError(err.message || "Error setting under review");
+      setActionError(err.message || "Error approving doctor");
     } finally {
       setActionLoading(null);
     }
@@ -243,7 +285,10 @@ export default function DoctorApprovals({ admin }: { admin: Admin }) {
   };
 
   const filteredDoctors: Doctor[] = doctors.filter(
-    (doc) => doc.status === "pending" || doc.status === "under_review"
+    (doc) =>
+      doc.status === "pending" ||
+      doc.status === "under_review" ||
+      doc.status === "suspended"
   );
 
   const renderDoctorCard = ({ item }: { item: Doctor }) => (
@@ -420,6 +465,70 @@ export default function DoctorApprovals({ admin }: { admin: Admin }) {
         style={styles.doctorList}
         showsVerticalScrollIndicator={false}
       />
+      {/* Location Modal */}
+      <Modal
+        visible={showLocationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.3)",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "white",
+              padding: 24,
+              borderRadius: 10,
+              width: 300,
+            }}
+          >
+            <Text
+              style={{ fontSize: 18, fontWeight: "bold", marginBottom: 12 }}
+            >
+              Enter Doctor Location
+            </Text>
+            <TextInput
+              placeholder="Location"
+              value={locationInput}
+              onChangeText={setLocationInput}
+              style={{
+                borderWidth: 1,
+                borderColor: "#ccc",
+                borderRadius: 6,
+                padding: 8,
+                marginBottom: 16,
+              }}
+            />
+            <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+              <TouchableOpacity
+                onPress={() => setShowLocationModal(false)}
+                style={{ marginRight: 16 }}
+              >
+                <Text style={{ color: "#FF3B30" }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitApproveWithLocation}
+                style={{
+                  backgroundColor: "#34C759",
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "bold" }}>
+                  Approve
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

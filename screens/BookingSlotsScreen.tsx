@@ -41,13 +41,22 @@ export default function BookingSlotsScreen({
   const { doctor, selectedDate, availability = [] } = route.params || {};
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
-  const dateKey = selectedDate?.date
-    ? selectedDate.date.toISOString().split("T")[0]
-    : null;
-  const slotsForDate =
-    availability.find((a) => a.date === dateKey)?.slots || [];
+  // Ensure dateKey is always a string or null
+  const dateKey =
+    selectedDate?.date && typeof selectedDate.date === "string"
+      ? selectedDate.date
+      : null;
 
-  // Map slotKey to count
+  // Debugging: check what is being matched
+  console.log("dateKey", dateKey);
+  console.log("availability", availability);
+  const slotsForDate =
+    dateKey && Array.isArray(availability)
+      ? availability.find((a: any) => a.date === dateKey)?.slots || []
+      : [];
+  console.log("slotsForDate", slotsForDate);
+
+  // Map slotKey to count for quick lookup
   const slotCountMap = slotsForDate.reduce(
     (acc: Record<string, number>, slotObj: any) => {
       acc[slotObj.slotKey] = slotObj.count;
@@ -71,7 +80,7 @@ export default function BookingSlotsScreen({
       "16:00",
       "16:30",
     ];
-    const eveningSlots = ["18:00", "18:30", "19:00", "19:30", "20:00"];
+    const eveningSlots = ["18:00", "18:30", "19:00", "19:30", "20:00", "20:30"];
 
     const addSlots = (timeSlots: string[], period: string) => {
       timeSlots.forEach((time: string) => {
@@ -84,7 +93,7 @@ export default function BookingSlotsScreen({
           price:
             period === "Morning" ? 500 : period === "Afternoon" ? 600 : 700,
           count,
-          slotKey, // include slotKey in slot object
+          slotKey,
         });
       });
     };
@@ -179,30 +188,20 @@ export default function BookingSlotsScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Select Time Slot</Text>
-      </View>
-
       <View style={styles.appointmentInfo}>
         <View style={styles.doctorInfo}>
-          <Text style={styles.doctorName}>{doctor?.name}</Text>
-          <Text style={styles.doctorSpecialty}>{doctor?.specialty}</Text>
+          {/* Doctor name and specialty removed as requested */}
         </View>
         <View style={styles.dateInfo}>
           <Ionicons name="calendar-outline" size={16} color="#007AFF" />
           <Text style={styles.selectedDateText}>
-            {selectedDate?.date.toLocaleDateString("en", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            {selectedDate?.date &&
+              new Date(selectedDate.date).toLocaleDateString("en", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
           </Text>
         </View>
       </View>
@@ -378,8 +377,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    backgroundColor: "white",
-    borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
   },
   selectedSlotInfo: {

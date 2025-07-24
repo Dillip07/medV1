@@ -37,6 +37,10 @@ const doctorSchema = new mongoose.Schema({
     imageUri: {
         type: String,
         required: false
+    },
+    location: {
+        type: Object, // Store as { lat, lng }
+        required: false
     }
 });
 

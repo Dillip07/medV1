@@ -30,6 +30,19 @@ const userSchema = new mongoose.Schema({
     imageUri: {
         type: String,
         required: false
+    },
+    location: {
+        type: Object, // Store as { lat, lng }
+        required: false
+    },
+    favoriteDoctors: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: "Doctor",
+        default: []
+    },
+    expoPushToken: {
+        type: String,
+        required: false
     }
 });
 const User = mongoose.model("User", userSchema);

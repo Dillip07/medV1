@@ -11,6 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -110,8 +111,11 @@ export default function LoginScreen({
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Ionicons name="medical" size={60} color="#007AFF" />
-            <Text style={styles.title}>MedApp</Text>
+            <Image
+              source={require("../assets/logo-transparent.png")}
+              style={styles.logo}
+            />
+            <Text style={styles.title}>MyMedCare</Text>
             <Text style={styles.subtitle}>Sign in to your account</Text>
           </View>
 
@@ -223,6 +227,11 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginBottom: 40,
+  },
+  logo: {
+    width: 80, // Adjust as needed
+    height: 80, // Adjust as needed
+    resizeMode: "contain",
   },
   title: {
     fontSize: 32,

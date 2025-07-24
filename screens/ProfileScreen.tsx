@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  Switch,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
@@ -46,6 +47,9 @@ export default function ProfileScreen({
   // Track if any field is changed
   const isPersonalInfoChanged =
     editName !== userName || editEmail !== userEmail || editPhone !== userPhone;
+
+  // Privacy toggles state
+  const [darkMode, setDarkMode] = useState(false);
 
   const [displayName, setDisplayName] = useState(userName);
   const [displayEmail, setDisplayEmail] = useState(userEmail);
@@ -129,17 +133,6 @@ export default function ProfileScreen({
       title: "Personal Information",
       icon: "person-outline",
       content: "personal",
-    },
-    { title: "Medical History", icon: "medical-outline", content: "medical" },
-    {
-      title: "Appointments",
-      icon: "calendar-outline",
-      content: "appointments",
-    },
-    {
-      title: "Notifications",
-      icon: "notifications-outline",
-      content: "notifications",
     },
     { title: "Privacy Settings", icon: "shield-outline", content: "privacy" },
     { title: "Help & Support", icon: "help-circle-outline", content: "help" },
@@ -349,41 +342,91 @@ export default function ProfileScreen({
                           </TouchableOpacity>
                         </View>
                       </>
-                    ) : option.content === "appointments" ? (
-                      loadingBookings ? (
-                        <Text style={{ color: "#666", fontSize: 16 }}>
-                          Loading bookings...
-                        </Text>
-                      ) : userBookings.length === 0 ? (
-                        <Text style={{ color: "#666", fontSize: 16 }}>
-                          No bookings found.
-                        </Text>
-                      ) : (
-                        <View>
-                          {userBookings.map((booking, idx) => (
-                            <View
-                              key={booking._id || idx}
-                              style={{
-                                marginBottom: 12,
-                                padding: 12,
-                                backgroundColor: "#f8f9fa",
-                                borderRadius: 8,
-                              }}
-                            >
-                              <Text
-                                style={{ fontWeight: "bold", color: "#007AFF" }}
-                              >
-                                Date: {booking.date}
-                              </Text>
-                              <Text>
-                                Doctor: {booking.doctorName || booking.doctorId}
-                              </Text>
-                              <Text>Time: {booking.time}</Text>
-                              <Text>Slot: {booking.slot}</Text>
-                            </View>
-                          ))}
+                    ) : option.content === "privacy" ? (
+                      // Only Dark Mode toggle and Download Health Data row
+                      <View>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 16,
+                          }}
+                        >
+                          <Text style={{ fontWeight: "500", marginBottom: 2 }}>
+                            Dark Mode
+                          </Text>
+                          <Switch
+                            value={darkMode}
+                            onValueChange={setDarkMode}
+                            trackColor={{ false: "#ccc", true: "#34C759" }}
+                            thumbColor={darkMode ? "#fff" : "#f4f3f4"}
+                            ios_backgroundColor="#ccc"
+                          />
                         </View>
-                      )
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 8,
+                            paddingVertical: 8,
+                          }}
+                        >
+                          <Text style={{ fontWeight: "500", color: "#333" }}>
+                            Download your health data
+                          </Text>
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: "#007AFF",
+                              borderRadius: 20,
+                              width: 36,
+                              height: 36,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onPress={() => {
+                              /* TODO: implement download logic */
+                            }}
+                          >
+                            <Ionicons
+                              name="download-outline"
+                              size={20}
+                              color="#fff"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : option.content === "help" ? (
+                      // Help & Support text
+                      <View>
+                        <Text
+                          style={{
+                            fontWeight: "bold",
+                            fontSize: 18,
+                            marginBottom: 16,
+                          }}
+                        >
+                          Help & Support
+                        </Text>
+                        <Text style={{ color: "#666", marginBottom: 10 }}>
+                          Need assistance? We're here to help you 24/7!
+                        </Text>
+                        <Text style={{ color: "#666", marginBottom: 10 }}>
+                          • For technical support, contact us at{" "}
+                          <Text style={{ color: "#007AFF" }}>
+                            support@mymedcare.com
+                          </Text>
+                        </Text>
+                        <Text style={{ color: "#666", marginBottom: 10 }}>
+                          • Visit our FAQ section for quick answers to common
+                          questions.
+                        </Text>
+                        <Text style={{ color: "#666" }}>
+                          • Your feedback matters! Let us know how we can
+                          improve your experience.
+                        </Text>
+                      </View>
                     ) : (
                       <Text style={{ color: "#666", fontSize: 16 }}>
                         [{option.title} content here]
@@ -394,17 +437,31 @@ export default function ProfileScreen({
               </React.Fragment>
             ))}
           </View>
-
-          {/* Logout Button */}
-          <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-
-          {/* App Version */}
-          <Text style={styles.versionText}>Version 1.0.0</Text>
         </View>
       </ScrollView>
+      {/* Logout Button */}
+      <TouchableOpacity
+        style={[
+          styles.logoutButton,
+          {
+            padding: 8,
+            minHeight: 0,
+            borderRadius: 8,
+            alignSelf: "center",
+            width: 120,
+            justifyContent: "center",
+          },
+        ]}
+        onPress={onLogout}
+      >
+        <Ionicons name="log-out-outline" size={16} color="#FF3B30" />
+        <Text style={[styles.logoutText, { fontSize: 14, marginLeft: 6 }]}>
+          Logout
+        </Text>
+      </TouchableOpacity>
+
+      {/* App Version */}
+      <Text style={styles.versionText}>Version 1.0.0</Text>
     </SafeAreaView>
   );
 }

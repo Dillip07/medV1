@@ -39,12 +39,15 @@ export default function BookingConfirmationScreen({
       day: "numeric",
     });
 
-    const appointmentDate = selectedDate.date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const appointmentDate = new Date(selectedDate.date).toLocaleDateString(
+      "en-US",
+      {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }
+    );
 
     const currentTime = new Date().toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -363,7 +366,15 @@ export default function BookingConfirmationScreen({
               </div>
               <div class="info-row">
                 <span class="info-label">Hospital</span>
-                <span class="info-value">${doctor.hospital}</span>
+                <span class="info-value">${
+                  doctor.hospital ||
+                  (doctor.location && doctor.location.lat && doctor.location.lng
+                    ? `${doctor.location.lat.toFixed(
+                        5
+                      )}, ${doctor.location.lng.toFixed(5)}`
+                    : "Not specified")
+                }</span>
+                <!-- Coordinates can be added here if needed. -->
               </div>
             </div>
             
@@ -521,7 +532,9 @@ export default function BookingConfirmationScreen({
       });
 
       // Create a more descriptive filename
-      const appointmentDate = selectedDate.date.toISOString().split("T")[0];
+      const appointmentDate = new Date(selectedDate.date)
+        .toISOString()
+        .split("T")[0];
       const fileName = `MediCare_Appointment_${bookingId}_${appointmentDate}.pdf`;
       const newUri = `${FileSystem.documentDirectory}${fileName}`;
 
@@ -566,25 +579,44 @@ export default function BookingConfirmationScreen({
 
   const handleShareBooking = async () => {
     try {
-      const message = `🏥 Appointment Confirmed!\n\n📋 Booking ID: ${bookingId}\n👨‍⚕️ Doctor: ${
-        doctor.name
-      }\n📅 Date: ${selectedDate.date.toLocaleDateString()}\n⏰ Time: ${
-        selectedSlot.time
-      }\n💰 Amount Paid: ₹${
-        bookingDetails.total
-      }\n\n✅ Payment Status: Completed\n📍 Location: ${
-        doctor.hospital
-      }\n\nSee you at your appointment! 😊`;
+      // Generate PDF
+      const htmlContent = generatePDFHTML();
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+        width: 612,
+        height: 792,
+        margins: {
+          left: 20,
+          top: 20,
+          right: 20,
+          bottom: 20,
+        },
+      });
 
-      await Share.share({
-        message: message,
-        title: "🏥 Appointment Confirmation - MediCare Plus",
+      // Create a more descriptive filename
+      const appointmentDate = new Date(selectedDate.date)
+        .toISOString()
+        .split("T")[0];
+      const fileName = `MediCare_Appointment_${bookingId}_${appointmentDate}.pdf`;
+      const newUri = `${FileSystem.documentDirectory}${fileName}`;
+
+      // Move the file to a permanent location
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newUri,
+      });
+
+      // Share the PDF
+      await Sharing.shareAsync(newUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Share Appointment Confirmation PDF",
+        UTI: "com.adobe.pdf",
       });
     } catch (error) {
-      console.log("Error sharing:", error);
       Alert.alert(
         "Sharing Error",
-        "Unable to share appointment details. Please try again."
+        "Unable to share appointment PDF. Please try again."
       );
     }
   };
@@ -640,12 +672,13 @@ export default function BookingConfirmationScreen({
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Date & Time</Text>
                 <Text style={styles.detailValue}>
-                  {selectedDate.date.toLocaleDateString("en", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {selectedDate?.date &&
+                    new Date(selectedDate.date).toLocaleDateString("en", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
                 </Text>
                 <Text style={styles.detailSubValue}>{selectedSlot.time}</Text>
               </View>
@@ -657,7 +690,14 @@ export default function BookingConfirmationScreen({
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Location</Text>
-                <Text style={styles.detailValue}>{doctor.hospital}</Text>
+                <Text style={styles.detailValue}>
+                  {doctor.hospital ||
+                    (doctor.location?.lat && doctor.location?.lng
+                      ? `${doctor.location.lat.toFixed(
+                          5
+                        )}, ${doctor.location.lng.toFixed(5)}`
+                      : "Not specified")}
+                </Text>
               </View>
             </View>
 

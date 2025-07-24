@@ -85,7 +85,7 @@ export default function PaymentScreen({
             patientPhone: user.phone,
             doctorId: doctor?._id,
             doctorName: doctor?.name,
-            date: selectedDate?.date?.toISOString().split("T")[0],
+            date: new Date(selectedDate.date).toISOString().split("T")[0],
             slot: selectedSlot.slotKey, // slotKey
             time: selectedSlot.time,
             checked: false, // <-- Add this line
@@ -103,7 +103,7 @@ export default function PaymentScreen({
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
               body: JSON.stringify({
-                date: selectedDate?.date?.toISOString().split("T")[0],
+                date: new Date(selectedDate.date).toISOString().split("T")[0],
                 slotKey: selectedSlot.slotKey, // slotKey
               }),
             }
@@ -152,16 +152,6 @@ export default function PaymentScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Payment</Text>
-      </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Booking Summary */}
         <View style={styles.summaryCard}>
@@ -173,11 +163,12 @@ export default function PaymentScreen({
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Date:</Text>
             <Text style={styles.summaryValue}>
-              {selectedDate.date.toLocaleDateString("en", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {selectedDate?.date &&
+                new Date(selectedDate.date).toLocaleDateString("en", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
             </Text>
           </View>
           <View style={styles.summaryRow}>
@@ -473,11 +464,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
+    paddingHorizontal: 10, // moved here
   },
   selectedPaymentMethod: {
     backgroundColor: "#007AFF10",
     borderRadius: 8,
-    paddingHorizontal: 10,
   },
   paymentMethodLeft: {
     flexDirection: "row",

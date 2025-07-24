@@ -11,6 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -37,16 +38,16 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
     }
 
     setLoading(true);
+    navigation.navigate("OTPVerification", { phoneNumber });
     try {
       const response = await fetch(`${BACKEND_URL}/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone: phoneNumber }),
+        body: JSON.stringify({ name, email, phone: phoneNumber, location: "" }),
       });
       const data = await response.json();
       setLoading(false);
       if (data.success) {
-        navigation.navigate("OTPVerification", { phoneNumber });
       } else {
         Alert.alert("Error", data.message || "Failed to send OTP");
       }
@@ -80,7 +81,10 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
             >
               <Ionicons name="arrow-back" size={24} color="#007AFF" />
             </TouchableOpacity>
-            <Ionicons name="phone-portrait-outline" size={60} color="#007AFF" />
+            <Image
+              source={require("../assets/logo-transparent.png")}
+              style={styles.logo}
+            />
             <Text style={styles.title}>Enter Details</Text>
             <Text style={styles.subtitle}>
               We'll send you a verification code
@@ -179,6 +183,11 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginBottom: 40,
+  },
+  logo: {
+    width: 80, // Adjust as needed
+    height: 80, // Adjust as needed
+    resizeMode: "contain",
   },
   backButton: {
     position: "absolute",

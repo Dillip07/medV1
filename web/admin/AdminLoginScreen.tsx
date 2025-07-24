@@ -78,7 +78,7 @@ export default function AdminLoginScreen({
       const data = await response.json();
       setLoading(false);
       if (response.ok && data.success) {
-        // Store token in localStorage
+        // Store token in localStorageapply
         if (data.token) {
           localStorage.setItem("admin_token", data.token);
         }

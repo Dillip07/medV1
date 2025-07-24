@@ -15,26 +15,40 @@ const BACKEND_URL =
   process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3000";
 
 export default function NotificationsScreen({ user }: { user?: any }) {
-  // Only dynamic notifications (upcoming bookings)
-  const [upcomingBookings, setUpcomingBookings] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!user?.phone) return;
-    // Fetch bookings for this user
-    fetch(`${BACKEND_URL}/bookings`)
-      .then((res) => res.json())
-      .then((data) => {
-        // Only show future bookings for this user with checked === false
-        const now = new Date();
-        const userBookings = (data.bookings || []).filter(
-          (b: any) =>
-            b.patientPhone === user.phone &&
-            new Date(b.date) >= now &&
-            b.checked === false // Only future or today and not checked
-        );
-        setUpcomingBookings(userBookings);
-      });
-  }, [user]);
+  // Example static notifications
+  const notifications = [
+    {
+      id: "1",
+      type: "appointment",
+      title: "Appointment Reminder",
+      message: "You have an appointment with Dr. Smith tomorrow at 10:00 AM.",
+      time: "2 days ago",
+    },
+    {
+      id: "2",
+      type: "appointment",
+      title: "Appointment Reminder",
+      message:
+        "Your appointment with Dr. Emily Davis is scheduled for Friday at 3:30 PM.",
+      time: "1 day ago",
+    },
+    {
+      id: "3",
+      type: "appointment",
+      title: "Appointment Reminder",
+      message:
+        "Don’t forget your checkup with Dr. Michael Chen next Monday at 9:00 AM.",
+      time: "Today",
+    },
+    {
+      id: "4",
+      type: "appointment",
+      title: "Appointment Reminder",
+      message:
+        "You have a follow-up appointment with Dr. Sarah Johnson on 25th June at 11:15 AM.",
+      time: "Just now",
+    },
+  ];
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -68,26 +82,28 @@ export default function NotificationsScreen({ user }: { user?: any }) {
 
   // No mark as read logic needed for dynamic bookings
 
-  const renderBookingNotification = (booking: any) => (
-    <View
-      key={booking._id}
-      style={[styles.notificationCard, styles.unreadNotification]}
-    >
+  const renderNotification = ({ item }: { item: any }) => (
+    <View style={[styles.notificationCard, styles.unreadNotification]}>
       <View style={styles.notificationContent}>
         <View
-          style={[styles.notificationIcon, { backgroundColor: "#007AFF20" }]}
+          style={[
+            styles.notificationIcon,
+            { backgroundColor: getNotificationColor(item.type) + "20" },
+          ]}
         >
-          <Ionicons name="calendar" size={20} color="#007AFF" />
+          <Ionicons
+            name={getNotificationIcon(item.type)}
+            size={20}
+            color={getNotificationColor(item.type)}
+          />
         </View>
         <View style={styles.notificationText}>
           <View style={styles.notificationHeader}>
-            <Text style={styles.notificationTitle}>Upcoming Appointment</Text>
+            <Text style={styles.notificationTitle}>{item.title}</Text>
             <View style={styles.unreadDot} />
           </View>
-          <Text style={styles.notificationMessage}>
-            With Dr. {booking.doctorName} on {booking.date} at {booking.time}
-          </Text>
-          <Text style={styles.notificationTime}>Slot: {booking.slot}</Text>
+          <Text style={styles.notificationMessage}>{item.message}</Text>
+          <Text style={styles.notificationTime}>{item.time}</Text>
         </View>
       </View>
     </View>
@@ -98,15 +114,21 @@ export default function NotificationsScreen({ user }: { user?: any }) {
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
       </View>
-
-      {/* Show upcoming bookings at the top */}
-      {upcomingBookings.length > 0 && (
-        <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
-          {upcomingBookings.map(renderBookingNotification)}
-        </View>
-      )}
-
-      {/* Only upcoming bookings are shown as notifications. */}
+      <FlatList
+        data={notifications}
+        renderItem={renderNotification}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 20, marginTop: 10 }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <Ionicons name="notifications-outline" size={64} color="#ccc" />
+            <Text style={{ color: "#666", fontSize: 16, marginTop: 10 }}>
+              No notifications
+            </Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }

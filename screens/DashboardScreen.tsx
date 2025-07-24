@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function DashboardScreen() {
   const quickStats = [
@@ -49,6 +52,12 @@ export default function DashboardScreen() {
       icon: "medical",
     },
   ];
+
+  const LOCATION_PERMISSION_KEY = "location_permission_asked";
+  const BACKEND_URL =
+    process.env.EXPO_PUBLIC_BACKEND_URL || "http://192.168.29.52:3000";
+
+  // Remove the useEffect that checks and requests location permission
 
   return (
     <SafeAreaView style={styles.container}>

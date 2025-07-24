@@ -12,7 +12,7 @@ export default function PortalSelection({
     <View style={styles.container}>
       <View style={styles.header}>
         <Ionicons name="medical" size={60} color="#007AFF" />
-        <Text style={styles.title}>MedApp Web Portal</Text>
+        <Text style={styles.title}>MyMedCare Web Portal</Text>
         <Text style={styles.subtitle}>Choose your access portal</Text>
       </View>
 

@@ -9,7 +9,7 @@ export default function WebHeader() {
       <View style={styles.headerContent}>
         <View style={styles.logo}>
           <Ionicons name="medical" size={32} color="#007AFF" />
-          <Text style={styles.logoText}>MedApp</Text>
+          <Text style={styles.logoText}>MyMedCare</Text>
           <Text style={styles.logoSubtext}>Doctor Portal</Text>
         </View>
         <View style={styles.headerInfo}>

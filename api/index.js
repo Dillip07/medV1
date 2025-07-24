@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
-const port = 3000;
+const port = process.env.PORT || 3000;
 const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -13,6 +13,7 @@ const Doctor = require("./models/doctor");
 const DoctorAvailability = require("./models/doctoravailability");
 const Booking = require('./models/booking');
 const Admin = require('./models/admin');
+// Remove: const fetch = require('node-fetch');
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '5mb' }));
@@ -51,7 +52,7 @@ const generateSecretKey = () => {
 const secretKey = generateSecretKey();
 
 app.post("/request-otp", async (req, res) => {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, location, expoPushToken } = req.body;
     let formattedPhone = phone;
     if (!formattedPhone.startsWith("+91")) {
         formattedPhone = "+91" + formattedPhone;
@@ -62,7 +63,10 @@ app.post("/request-otp", async (req, res) => {
         let user = await User.findOne({ phone: formattedPhone });
         if (!user) {
             // Create a new user with verified set to false
-            user = new User({ name, email, phone: formattedPhone, verified: false });
+            user = new User({ name, email, phone: formattedPhone, verified: false, location: location || "", expoPushToken });
+            await user.save();
+        } else if (expoPushToken) {
+            user.expoPushToken = expoPushToken;
             await user.save();
         }
 
@@ -72,11 +76,11 @@ app.post("/request-otp", async (req, res) => {
 
         // Send OTP to the user's phone number
         console.log(otp);
-        await client.messages.create({
-            body: `Your OTP is: ${otp}`,
-            from: '16185168787', // Replace with your Twilio phone number
-            to: formattedPhone,
-        });
+        // await client.messages.create({
+        //     body: `Your OTP is: ${otp}`,
+        //     from: '16185168787', // Replace with your Twilio phone number
+        //     to: formattedPhone,
+        // });
 
         // Respond with success
         res.status(200).json({ success: true, message: "OTP sent successfully." });
@@ -133,7 +137,7 @@ app.post("/set-pin", async (req, res) => {
 
 app.post("/login", async (req, res) => {
     try {
-        const { email, phone, mpin } = req.body;
+        const { email, phone, mpin, expoPushToken } = req.body;
         let user;
         if (phone) {
             let formattedPhone = phone;
@@ -149,6 +153,11 @@ app.post("/login", async (req, res) => {
         }
         if (user.mpin !== mpin) {
             return res.status(401).json({ message: "Invalid PIN" });
+        }
+        // Save expoPushToken if provided
+        if (expoPushToken) {
+            user.expoPushToken = expoPushToken;
+            await user.save();
         }
         // Generate JWT token
         const token = jwt.sign(
@@ -180,7 +189,7 @@ app.get("/users", async (req, res) => {
 // Endpoint to register a new doctor
 app.post("/doctors", async (req, res) => {
     try {
-        const { name, email, phone, profession, experience } = req.body;
+        const { name, email, phone, profession, experience, location } = req.body;
         // Check if doctor already exists
         const existingDoctor = await Doctor.findOne({ email });
         if (existingDoctor) {
@@ -194,7 +203,8 @@ app.post("/doctors", async (req, res) => {
             experience,
             verified: false,
             status: 'pending',
-            requestDate: new Date()
+            requestDate: new Date(),
+            ...(location ? { location } : {})
         });
         await doctor.save();
         res.status(201).json({ success: true, message: "Doctor registered successfully", doctor });
@@ -227,7 +237,7 @@ const generateRandomString = (length = 8) => {
 app.patch("/doctors/:id/status", async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, verified } = req.body;
+        const { status, verified, location } = req.body;
         // Fetch the current doctor
         const doctor = await Doctor.findById(id);
         if (!doctor) {
@@ -240,6 +250,10 @@ app.patch("/doctors/:id/status", async (req, res) => {
             }
             doctor.status = "approved";
             doctor.verified = true;
+            // Store location if provided
+            if (location) {
+                doctor.location = location;
+            }
             // Generate credentials if not already present in DoctorCred
             let username, password;
             let cred = await DoctorCred.findOne({ doctorId: doctor._id });
@@ -418,6 +432,30 @@ app.post('/bookings', async (req, res) => {
             bookingId: req.body.bookingId,
         });
         await booking.save();
+
+        // --- Push notification logic ---
+        try {
+            // Find the user by phone
+            const user = await User.findOne({ phone: req.body.patientPhone });
+            if (user && user.expoPushToken) {
+                // Use dynamic import for node-fetch
+                const fetch = (await import('node-fetch')).default;
+                await fetch('https://exp.host/--/api/v2/push/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: user.expoPushToken,
+                        title: 'Booking Confirmed',
+                        body: `Your booking with Dr. ${req.body.doctorName} is confirmed!`,
+                        data: { bookingId: booking.bookingId }
+                    })
+                });
+            }
+        } catch (err) {
+            console.error('Failed to send push notification:', err);
+        }
+        // --- End push notification logic ---
+
         res.status(201).json({ success: true, booking });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to save booking' });
@@ -449,6 +487,17 @@ app.get('/bookings', async (req, res) => {
         res.status(200).json({ success: true, bookings });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch bookings' });
+    }
+});
+
+// Endpoint to get bookings for a user by phone
+app.get('/bookings/user/:phone', async (req, res) => {
+    try {
+        const { phone } = req.params;
+        const bookings = await Booking.find({ patientPhone: phone }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, bookings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch user bookings' });
     }
 });
 
@@ -521,11 +570,11 @@ app.patch('/doctors/:id/image', async (req, res) => {
 // PATCH endpoint to update user info (name, email, phone)
 app.patch('/users/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, email, phone } = req.body;
+    const { name, email, phone, location } = req.body;
     try {
         const user = await User.findByIdAndUpdate(
             id,
-            { name, email, phone },
+            { name, email, phone, ...(location !== undefined ? { location } : {}) },
             { new: true }
         );
         if (!user) {
@@ -534,6 +583,36 @@ app.patch('/users/:id', async (req, res) => {
         res.status(200).json({ success: true, user });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to update user' });
+    }
+});
+
+// Toggle favorite doctor for a user
+app.post('/users/:id/favorite', async (req, res) => {
+    const { id } = req.params;
+    const { doctorId } = req.body;
+    if (!doctorId) {
+        return res.status(400).json({ success: false, message: 'doctorId is required' });
+    }
+    try {
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        const index = user.favoriteDoctors.findIndex(d => d.toString() === doctorId);
+        let action;
+        if (index > -1) {
+            // Remove from favorites
+            user.favoriteDoctors.splice(index, 1);
+            action = 'removed';
+        } else {
+            // Add to favorites
+            user.favoriteDoctors.push(doctorId);
+            action = 'added';
+        }
+        await user.save();
+        res.status(200).json({ success: true, action, favoriteDoctors: user.favoriteDoctors });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to update favorites' });
     }
 });
 
