@@ -78,7 +78,7 @@ app.post("/request-otp", async (req, res) => {
         console.log(otp);
         await client.messages.create({
             body: `Your OTP is: ${otp}`,
-            from: 15074971674, // Replace with your Twilio phone number
+            from: '+15074971674', // Replace with your Twilio phone number
             to: formattedPhone,
         });
 
